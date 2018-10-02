@@ -183,6 +183,32 @@ RDB个AOF的抉择
       数据安全性     丢数据       根据策略而定
       轻重          重          轻
 
+Redis持久化在开发运维常见问题
+fork操作：
+    1.同步操作
+    2.执行时间与内存量息息相关：内存越大，耗时越长（与机器类型有关）
+    3.info：latest_fork_usec 上一次执行fork操作所耗微秒数，该数字如果较大会阻塞Redis
+改善fork
+    1.优先使用物理机或者高效支持fork操作的虚拟化技术
+    2.控制Redis实例最大可用内存：maxmemory
+    3.合理配置Linux内存分配策略：vm.overcommit_memory = 1
+    4.降低fork频率：例如放宽AOF重写自动触发时机，不必要的全量复制
+子进程开销和优化
+    1.CPU：
+        开销：RDB和AOF文件生成，属于CPU密集型
+        优化：不做CPU绑定，不和CPU密集型一起部署
+    2.内存：
+        开销：fork内存开销，copy-on-write
+        优化：系统方面可以进行优化
+    3.硬盘
+        开销：RDB和AOF文件写入，可以结合iostat，iotop分析
+        优化：不要和高硬盘负载服务部署在一起：存储服务、消息队列等。
+             no-appendfsync-on-rewrite = yes
+             根据写入量决定磁盘类型：例如ssd
+             单机多实例持久化文件目录可以考虑分盘
+
+
+
 
 
 
