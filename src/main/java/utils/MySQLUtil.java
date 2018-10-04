@@ -10,7 +10,7 @@ import java.util.Properties;
 
 /**
  * @Class MySQLUtil
- * @Description: TODO
+ * @Description: MySQL工具类，主要获取MySQL连接和关闭连接
  * @Author: luozhen
  * @Create: 2018/10/02 20:37
  */

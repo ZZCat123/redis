@@ -255,6 +255,71 @@ fork操作：
                 出现情况：但台机器上放置多个master，机器宕机后，发生大量全量复制
                 解决方案：主节点分散到多台机器上
 
+Redis Sentinel
+主从复制问题：1.手动故障转移 2.写能力和存储能力受限
+三个定时任务
+1.每10s每个sentinel对master和slave进行info
+    发现slave节点
+    确认主从关系
+2.每2s每个sentinel通过master节点的channel交换信息（pub/sub）
+    通过"_sentinel_:hello"频道交互
+    交互对节点的"看法"和自身信息
+3.每1s每个sentinel对其他sentinel和redis执行ping
+    心跳检测，失败判定依据
+主观下线和客观下线（判断是否下线master，即master是否有问题）
+    主观下线：每个sentinel节点对redis节点失败的"偏见"
+    客观下线：所有sentinel节点对redis节点失败"达成共识"（超过quorum统一）
+            sentinel is-master-down-by-addr
+领导者（sentinel）选举
+    原因：只有一个sentinel节点完成故障转移
+    选举：通过sentinel is-master-down-by-addr命令都希望成为领导者
+        1.每个做主观下线的sentinel节点向其他sentinel节点发送的命令，要求将他设置为领导者
+        2.收到命令的sentinel节点如果没有同意其他sentinel节点发送的命令，那么将同意该请求，否则拒绝
+        3.如果该sentinel节点发现自己的票数已经超过sentinel集合半数且超过quorum，那么它将成为领导者
+        4.如果此过程有多个sentinel节点成为了领导者，那么将等待一段时间重新进行选举
+故障转移（sentinel领导者节点选举完成）
+    1.从slave节点选出一个"合适的"节点作为新的master节点
+    2.对上面的slave节点执行slaveof no one命令让其成为新的master节点
+    3.向剩余的slave节点发送命令，让它们成为新的master节点的slave节点，复制规则和parallel-syncs参数有关
+    4.更新原来的master节点配置为slave，并保持对其"关注"，当其恢复后命令它去复制新的master节点
+选择"合适的"slave节点
+    1.选择slave-priority（slave节点优先级）最高的节点，如果存在则返回，不存在则继续。
+    2.选择复制偏移量最大的slave节点（复制的最完整），如果存在则返回，不存在则继续
+    3.选择runId最小的slave节点
+Redis Sentinel的常见开发运维问题
+节点运维：主节点、从节点、sentinel节点
+    1.机器下线：例如过保等情况
+    2.机器性能不足：例如CPU、内存、硬盘、网络等
+    3.节点自身故障：例如服务不稳定等
+节点下线
+    主节点下线:sentinel failover <mastername>手动下线主节点
+    从节点：临时下线还是永久下线，例如是否做一些清理工作。但是要考虑读写分离的情况
+    sentinel节点：同从节点
+节点上线
+    主节点：sentinel failover进行替换
+    从节点：slaveof即可，sentinel节点可以感知
+    sentinel节点：参考其他的sentinel节点启动即可
+高可用读写分离（基于Redis Sentinel）
+    从节点的作用：
+        1.副本：高可用的基础
+        2.扩展：读能力
+    三个消息
+        1.+switch-master：切换主节点（slave晋升为master）
+        2.+convert-to-slave：切换从节点（原主节点降为从节点）
+        3.+sdown：主观下线
+总结：
+    1.Redis Sentinel是Redis的高可用实现方案：故障发现、故障自动转移、配置中心、客户端通知
+    2.Redis Sentinel从Redis2.8版本才开始正式生产可用，之前的版本生产不可用
+    3.尽可能在不同的物理机器上部署Redis Sentinel所有节点
+    4.Redis Sentinel的Sentinel节点个数应该大于等于3，且最好为奇数
+    5.Redis Sentinel中的数据节点与普通数据节点没有区别
+    6.客户端初始化时连接的是Sentinel节点集合，不再是具体的Redis节点，但是Sentinel只是配置中心，并不是代理
+    7.Redis Sentinel通过三个定时任务实现了Sentinel节点对于主节点、从节点、其余Sentinel节点的监控
+    8.Redis Sentinel在对节点做失败判定时分为主观下线和客观下线
+    9.看懂Redis Sentinel故障转移日志对于Redis Sentinel以及问题排查非常有帮助
+    10.Redis Sentinel实现读写分离高可用可以依赖Sentinel节点的消息通知，获取Redis节点数据的状态变化
+
+
 
 
 

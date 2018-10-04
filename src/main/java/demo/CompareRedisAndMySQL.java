@@ -8,9 +8,6 @@ import utils.RedisConnectionFactory;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * @Class CompareRedisAndMySQL
@@ -68,7 +65,7 @@ public class CompareRedisAndMySQL {
             jedis.flushAll();
             sql = "update user set user_age = ? where user_id = 1";
             preparedStatement = (PreparedStatement) connection.prepareStatement(sql);
-            preparedStatement.setInt(1, Integer.valueOf(userAge));
+            preparedStatement.setInt(1, userAge);
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -78,7 +75,7 @@ public class CompareRedisAndMySQL {
         }
     }
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) {
 //        ExecutorService service = Executors.newCachedThreadPool();
 //        CountDownLatch latch = new CountDownLatch(threshold / 100);
         for (int i = 1000; i >= 10; i /= 10) {
